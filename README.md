@@ -1,2 +1,2 @@
 # doobie-playground
-Examples of use case of the doobie library
+Examples of some use cases of the doobie library
