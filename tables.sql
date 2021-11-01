@@ -2,16 +2,26 @@
 -- TABLES CREATION --
 ---------------------
 
+-- Directors
+CREATE TABLE "DIRECTORS" (
+  "ID" serial NOT NULL,
+  PRIMARY KEY ("ID"),
+  "NAME" character varying NOT NULL,
+  "LAST_NAME" character varying NOT NULL
+);
+
 -- Movies
 CREATE TABLE "MOVIES" (
   "ID" uuid NOT NULL,
   "TITLE" character varying NOT NULL,
   "YEAR" smallint NOT NULL,
-  "DIRECTOR" character varying NOT NULL
+  "DIRECTOR_ID" integer NOT NULL
 );
 
 ALTER TABLE "MOVIES"
 ADD CONSTRAINT "MOVIES_ID" PRIMARY KEY ("ID");
+ALTER TABLE "MOVIES"
+ADD CONSTRAINT "MOVIES_DIRECTOR_ID" FOREIGN KEY ("DIRECTOR_ID") REFERENCES "DIRECTORS" ("ID");
 
 -- Actors
 CREATE TABLE "ACTORS" (
@@ -49,8 +59,8 @@ INSERT INTO "ACTORS" ("NAME") VALUES ('Jason Momoa');
 COMMIT;
 
 -- Movies
-INSERT INTO "MOVIES" ("ID", "TITLE", "YEAR", "DIRECTOR")
-VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 'Zack Snyder''s Justice League', '2021', 'Zack Snyder');
+INSERT INTO "MOVIES" ("ID", "TITLE", "YEAR", "DIRECTOR_ID")
+VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 'Zack Snyder''s Justice League', '2021', 1);
 COMMIT;
 
 -- Actor-Movie link
@@ -66,4 +76,9 @@ INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 5);
 INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 6);
+COMMIT;
+
+-- Directors
+INSERT INTO "DIRECTORS" ("NAME", "LAST_NAME")
+VALUES ('Zack', 'Snyder');
 COMMIT;
