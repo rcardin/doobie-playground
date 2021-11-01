@@ -1,6 +1,7 @@
 import doobie._
 import doobie.implicits._
 import cats._
+import cats.data.NonEmptyList
 import cats.effect._
 import cats.implicits._
 import doobie.util.transactor.Transactor.Aux
@@ -43,8 +44,14 @@ object DoobieApp extends IOApp {
     findActor.transact(xa)
   }
 
+  def findActorsByNames(actorNames: NonEmptyList[String]): IO[List[Actor]] = {
+    val findActors: fs2.Stream[doobie.ConnectionIO, Actor] =
+      (fr"""select "ID", "NAME" from "ACTORS" where """ ++ Fragments.in(fr""""NAME"""", actorNames)).query[Actor].stream
+    findActors.compile.toList.transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    findActorByName("Henry Cavill")
+    findActorsByNames(NonEmptyList.of("Henry Cavill", "Jason Momoa"))
       .map(println)
       .as(ExitCode.Success)
   }
