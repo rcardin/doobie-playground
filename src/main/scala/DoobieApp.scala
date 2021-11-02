@@ -52,8 +52,8 @@ object DoobieApp extends IOApp {
     // The withUniqueGeneratedKeys says that we expected only one row back, and
     // allows us to get a set of columns from the modified row.
     val saveActor: doobie.ConnectionIO[Int] =
-      sql"""insert into "ACTORS" ("NAME") values ($name)"""
-        .update.withUniqueGeneratedKeys[Int]("ID")
+    sql"""insert into "ACTORS" ("NAME") values ($name)"""
+      .update.withUniqueGeneratedKeys[Int]("ID")
     saveActor.transact(xa)
   }
 
@@ -67,8 +67,15 @@ object DoobieApp extends IOApp {
     retrievedActor.transact(xa)
   }
 
+  def saveActors(actors: NonEmptyList[String]): IO[List[Int]] = {
+    // This is a simple String, not a Fragment.
+    val insertStmt: String = """insert into "ACTORS" ("NAME") values (?) """
+    val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Int]("ID")(actors.toList)
+    actorsIds.compile.toList.transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    saveAndGetActor("Tom Hanks")
+    saveActors(NonEmptyList.of("Dwayne Johnson", "Christian Bale"))
       .map(println)
       .as(ExitCode.Success)
   }
