@@ -1,9 +1,7 @@
-import doobie._
-import doobie.implicits._
-import cats._
 import cats.data.NonEmptyList
 import cats.effect._
-import cats.implicits._
+import doobie._
+import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
 
 object DoobieApp extends IOApp {
@@ -50,8 +48,27 @@ object DoobieApp extends IOApp {
     findActors.compile.toList.transact(xa)
   }
 
+  def saveActor(name: String): IO[Int] = {
+    // The withUniqueGeneratedKeys says that we expected only one row back, and
+    // allows us to get a set of columns from the modified row.
+    val saveActor: doobie.ConnectionIO[Int] =
+      sql"""insert into "ACTORS" ("NAME") values ($name)"""
+        .update.withUniqueGeneratedKeys[Int]("ID")
+    saveActor.transact(xa)
+  }
+
+  def saveAndGetActor(name: String): IO[Actor] = {
+    // There is also a variant of the withUniqueGeneratedKeys that
+    // allows us to retrieve more than a row. It's called withGeneratedKeys.
+    val retrievedActor = for {
+      id <- sql"""insert into "ACTORS" ("NAME") values ($name)""".update.withUniqueGeneratedKeys[Int]("ID")
+      actor <- sql"""select * from "ACTORS" where "ID" = $id""".query[Actor].unique
+    } yield actor
+    retrievedActor.transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    findActorsByNames(NonEmptyList.of("Henry Cavill", "Jason Momoa"))
+    saveAndGetActor("Tom Hanks")
       .map(println)
       .as(ExitCode.Success)
   }
