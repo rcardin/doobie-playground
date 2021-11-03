@@ -74,8 +74,55 @@ object DoobieApp extends IOApp {
     actorsIds.compile.toList.transact(xa)
   }
 
+  class Director(_name: String, _lastName: String) {
+    def name: String = _name
+    def lastName: String = _lastName
+    override def toString: String = s"$name $lastName"
+  }
+  object Director {
+    implicit val directorRead: Read[Director] =
+      Read[(String, String)].map { case (name, lastname) => new Director(name, lastname) }
+
+    implicit val directorWrite: Write[Director] =
+      Write[(String, String)].contramap(director => (director.name, director.lastName))
+  }
+
+  // Cannot find or construct a Read instance for type:
+  //
+  //   DoobieApp.Director
+  //
+  // This can happen for a few reasons, but the most common case is that a data
+  // member somewhere within this type doesn't have a Get instance in scope. Here are
+  // some debugging hints:
+  //
+  // - For Option types, ensure that a Read instance is in scope for the non-Option
+  //   version.
+  // - For types you expect to map to a single column ensure that a Get instance is
+  //   in scope.
+  // - For case classes, HLists, and shapeless records ensure that each element
+  //   has a Read instance in scope.
+  // - Lather, rinse, repeat, recursively until you find the problematic bit.
+  //
+  // You can check that an instance exists for Read in the REPL or in your code:
+  //
+  //   scala> Read[Foo]
+  //
+  // and similarly with Get:
+  //
+  //   scala> Get[Foo]
+  //
+  // And find the missing instance and construct it as needed. Refer to Chapter 12
+  // of the book of doobie for more information.
+  //
+  //       sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[Director].stream
+  def findAllDirectors(): IO[List[Director]] = {
+    val findAllDirectors: fs2.Stream[doobie.ConnectionIO, Director] =
+      sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[Director].stream
+    findAllDirectors.compile.toList.transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    saveActors(NonEmptyList.of("Dwayne Johnson", "Christian Bale"))
+    findAllDirectors()
       .map(println)
       .as(ExitCode.Success)
   }
