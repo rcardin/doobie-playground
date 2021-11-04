@@ -3,82 +3,82 @@
 ---------------------
 
 -- Directors
-CREATE TABLE "DIRECTORS" (
-  "ID" serial NOT NULL,
-  PRIMARY KEY ("ID"),
-  "NAME" character varying NOT NULL,
-  "LAST_NAME" character varying NOT NULL
+CREATE TABLE directors (
+  id serial NOT NULL,
+  PRIMARY KEY (id),
+  name character varying NOT NULL,
+  last_name character varying NOT NULL
 );
 
 -- Movies
-CREATE TABLE "MOVIES" (
-  "ID" uuid NOT NULL,
-  "TITLE" character varying NOT NULL,
-  "YEAR" smallint NOT NULL,
-  "DIRECTOR_ID" integer NOT NULL
+CREATE TABLE movies (
+  id uuid NOT NULL,
+  title character varying NOT NULL,
+  year_of_production smallint NOT NULL,
+  director_id integer NOT NULL
 );
 
-ALTER TABLE "MOVIES"
-ADD CONSTRAINT "MOVIES_ID" PRIMARY KEY ("ID");
-ALTER TABLE "MOVIES"
-ADD CONSTRAINT "MOVIES_DIRECTOR_ID" FOREIGN KEY ("DIRECTOR_ID") REFERENCES "DIRECTORS" ("ID");
+ALTER TABLE movies
+ADD CONSTRAINT movies_id PRIMARY KEY (id);
+ALTER TABLE movies
+ADD CONSTRAINT movies_director_id FOREIGN KEY (director_id REFERENCES "DIRECTORS" (id);
 
 -- Actors
-CREATE TABLE "ACTORS" (
-  "ID" serial NOT NULL,
-  PRIMARY KEY ("ID"),
-  "NAME" character varying NOT NULL
+CREATE TABLE actors (
+  id serial NOT NULL,
+  PRIMARY KEY (id),
+  name character varying NOT NULL
 );
-COMMENT ON TABLE "ACTORS" IS 'List of available actors';
+COMMENT ON TABLE actors IS 'List of available actors';
 
 -- Link between movies and actors
-CREATE TABLE "MOVIES_ACTORS" (
-  "ID_MOVIES" uuid NOT NULL,
-  "ID_ACTORS" integer NOT NULL
+CREATE TABLE movies_actors (
+  movie_id uuid NOT NULL,
+  actor_id integer NOT NULL
 );
-COMMENT ON TABLE "MOVIES_ACTORS" IS 'Connects movies to actors';
+COMMENT ON TABLE movies_actors IS 'Connects movies to actors';
 
-ALTER TABLE "MOVIES_ACTORS"
-ADD CONSTRAINT "MOVIES_ACTORS_ID_MOVIES_ID_ACTORS" PRIMARY KEY ("ID_MOVIES", "ID_ACTORS");
-ALTER TABLE "MOVIES_ACTORS"
-ADD FOREIGN KEY ("ID_MOVIES") REFERENCES "MOVIES" ("ID");
-ALTER TABLE "MOVIES_ACTORS"
-ADD FOREIGN KEY ("ID_ACTORS") REFERENCES "ACTORS" ("ID");
+ALTER TABLE movies_actors
+ADD CONSTRAINT movies_actors_id_movies_id_actors PRIMARY KEY (movie_id, actor_id);
+ALTER TABLE movies_actors
+ADD FOREIGN KEY (movie_id) REFERENCES movies (id);
+ALTER TABLE movies_actors
+ADD FOREIGN KEY (actor_id) REFERENCES actors (id);
 
 -----------------------
 -- TABLES POPULATION --
 -----------------------
 
 -- Actors
-INSERT INTO "ACTORS" ("NAME") VALUES ('Henry Cavill');
-INSERT INTO "ACTORS" ("NAME") VALUES ('Gal Godot');
-INSERT INTO "ACTORS" ("NAME") VALUES ('Ezra Miller');
-INSERT INTO "ACTORS" ("NAME") VALUES ('Ben Affleck');
-INSERT INTO "ACTORS" ("NAME") VALUES ('Ray Fisher');
-INSERT INTO "ACTORS" ("NAME") VALUES ('Jason Momoa');
+INSERT INTO actors (name) VALUES ('Henry Cavill');
+INSERT INTO actors (name) VALUES ('Gal Godot');
+INSERT INTO actors (name) VALUES ('Ezra Miller');
+INSERT INTO actors (name) VALUES ('Ben Affleck');
+INSERT INTO actors (name) VALUES ('Ray Fisher');
+INSERT INTO actors (name) VALUES ('Jason Momoa');
 COMMIT;
 
 -- Movies
-INSERT INTO "MOVIES" ("ID", "TITLE", "YEAR", "DIRECTOR_ID")
+INSERT INTO movies (id, title, year_of_production, director_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 'Zack Snyder''s Justice League', '2021', 1);
 COMMIT;
 
 -- Actor-Movie link
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 1);
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 2);
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 3);
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 4);
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 5);
-INSERT INTO "MOVIES_ACTORS" ("ID_MOVIES", "ID_ACTORS")
+INSERT INTO movies_actors (movie_id, actor_id)
 VALUES ('5e5a39bb-a497-4432-93e8-7322f16ac0b2', 6);
 COMMIT;
 
 -- Directors
-INSERT INTO "DIRECTORS" ("NAME", "LAST_NAME")
+INSERT INTO directors (name, last_name)
 VALUES ('Zack', 'Snyder');
 COMMIT;
