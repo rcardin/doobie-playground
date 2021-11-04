@@ -1,5 +1,6 @@
 import cats.data.NonEmptyList
 import cats.effect._
+import cats.implicits.catsSyntaxApplicativeId
 import doobie._
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
@@ -24,6 +25,15 @@ object DoobieApp extends IOApp {
     findAllActors.compile.toList.transact(xa)
   }
 
+  def findAllActorNamesUsingLowLevelApiProgram: IO[List[String]] = {
+    val query = """select "NAME" from "ACTORS" """
+    HC.stream[String](
+      query,
+      ().pure[PreparedStatementIO], // Input parameters to the sql statement
+      512
+    ).compile.toList.transact(xa)
+  }
+
   def findAllActorsProgram: IO[List[Actor]] = {
     val findAllActors: fs2.Stream[doobie.ConnectionIO, Actor] =
       sql"""select "ID", "NAME" from "ACTORS" """.query[Actor].stream
@@ -40,6 +50,18 @@ object DoobieApp extends IOApp {
     val findActor: doobie.ConnectionIO[Option[Actor]] =
       sql"""select "ID", "NAME" from "ACTORS" where "NAME" = $actorName""".query[Actor].option
     findActor.transact(xa)
+  }
+
+  def findActorByNameUsingLowLevelApi(actorName: String): IO[Option[Actor]] = {
+    val query = """select "ID", "NAME" from "ACTORS" where "NAME" = ?"""
+    HC.stream[Actor](
+      query,
+      HPS.set(actorName),   // Parameters start from index 1 by default
+      512
+    ).compile
+      .toList
+      .map(_.headOption)
+      .transact(xa)
   }
 
   def findActorsByNames(actorNames: NonEmptyList[String]): IO[List[Actor]] = {
@@ -76,9 +98,12 @@ object DoobieApp extends IOApp {
 
   class Director(_name: String, _lastName: String) {
     def name: String = _name
+
     def lastName: String = _lastName
+
     override def toString: String = s"$name $lastName"
   }
+
   object Director {
     implicit val directorRead: Read[Director] =
       Read[(String, String)].map { case (name, lastname) => new Director(name, lastname) }
@@ -122,7 +147,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findAllDirectors()
+    findActorByNameUsingLowLevelApi("Henry Cavill")
       .map(println)
       .as(ExitCode.Success)
   }
