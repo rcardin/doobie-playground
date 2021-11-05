@@ -146,6 +146,29 @@ object DoobieApp extends IOApp {
     findAllDirectors.compile.toList.transact(xa)
   }
 
+  def findMovieByName(movieName: String): IO[Option[Movie]] = {
+    val query = sql"""
+         |SELECT m.id,
+         |       m.title,
+         |       m.year_of_production,
+         |       array_agg(a.name) as actors,
+         |       d.name
+         |       d.last_name
+         |FROM movies m
+         |JOIN movies_actors ma ON m.id = ma.movie_id
+         |JOIN actors a ON ma.actor_id = a.id
+         |JOIN directors d ON m.director_id = d.id
+         |GROUP BY (m.id,
+         |          m.title,
+         |          m.year_of_production,
+         |          d.name,
+         |          d.last_name)
+         |""".stripMargin
+      .query[Movie]
+      .option
+    query.transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
     findActorByNameUsingLowLevelApi("Henry Cavill")
       .map(println)
