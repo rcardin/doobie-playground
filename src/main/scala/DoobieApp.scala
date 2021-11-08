@@ -3,6 +3,9 @@ import cats.effect._
 import cats.implicits.catsSyntaxApplicativeId
 import doobie._
 import doobie.implicits._
+// Very important to deal with arrays
+import doobie.postgres._
+import doobie.postgres.implicits._
 import doobie.util.transactor.Transactor.Aux
 
 object DoobieApp extends IOApp {
@@ -14,7 +17,7 @@ object DoobieApp extends IOApp {
   // TODO What's Aux?
   val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
     "org.postgresql.Driver",
-    "jdbc:postgresql:postgres",
+    "jdbc:postgresql:myimdb",
     "postgres",
     "example"
   )
@@ -26,7 +29,7 @@ object DoobieApp extends IOApp {
   }
 
   def findAllActorNamesUsingLowLevelApiProgram: IO[List[String]] = {
-    val query = """select "NAME" from "ACTORS" """
+    val query = "select name from actors"
     HC.stream[String](
       query,
       ().pure[PreparedStatementIO], // Input parameters to the sql statement
@@ -36,24 +39,24 @@ object DoobieApp extends IOApp {
 
   def findAllActorsProgram: IO[List[Actor]] = {
     val findAllActors: fs2.Stream[doobie.ConnectionIO, Actor] =
-      sql"""select "ID", "NAME" from "ACTORS" """.query[Actor].stream
+      sql"select id, name from actors".query[Actor].stream
     findAllActors.compile.toList.transact(xa)
   }
 
   def findAllDirectorsProgram: IO[List[(String, String)]] = {
     val findAllDirectors: fs2.Stream[doobie.ConnectionIO, (String, String)] =
-      sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[(String, String)].stream
+      sql"select name, last_name from directors ".query[(String, String)].stream
     findAllDirectors.compile.toList.transact(xa)
   }
 
   def findActorByName(actorName: String): IO[Option[Actor]] = {
     val findActor: doobie.ConnectionIO[Option[Actor]] =
-      sql"""select "ID", "NAME" from "ACTORS" where "NAME" = $actorName""".query[Actor].option
+      sql"select id, name from actors where name = $actorName".query[Actor].option
     findActor.transact(xa)
   }
 
   def findActorByNameUsingLowLevelApi(actorName: String): IO[Option[Actor]] = {
-    val query = """select "ID", "NAME" from "ACTORS" where "NAME" = ?"""
+    val query = "select id, name from actors where name = ?"
     HC.stream[Actor](
       query,
       HPS.set(actorName),   // Parameters start from index 1 by default
@@ -66,7 +69,7 @@ object DoobieApp extends IOApp {
 
   def findActorsByNames(actorNames: NonEmptyList[String]): IO[List[Actor]] = {
     val findActors: fs2.Stream[doobie.ConnectionIO, Actor] =
-      (fr"""select "ID", "NAME" from "ACTORS" where """ ++ Fragments.in(fr""""NAME"""", actorNames)).query[Actor].stream
+      (fr"select id, name from actors where " ++ Fragments.in(fr"name", actorNames)).query[Actor].stream
     findActors.compile.toList.transact(xa)
   }
 
@@ -74,8 +77,8 @@ object DoobieApp extends IOApp {
     // The withUniqueGeneratedKeys says that we expected only one row back, and
     // allows us to get a set of columns from the modified row.
     val saveActor: doobie.ConnectionIO[Int] =
-    sql"""insert into "ACTORS" ("NAME") values ($name)"""
-      .update.withUniqueGeneratedKeys[Int]("ID")
+    sql"insert into actors (name) values ($name)"
+      .update.withUniqueGeneratedKeys[Int]("id")
     saveActor.transact(xa)
   }
 
@@ -83,15 +86,15 @@ object DoobieApp extends IOApp {
     // There is also a variant of the withUniqueGeneratedKeys that
     // allows us to retrieve more than a row. It's called withGeneratedKeys.
     val retrievedActor = for {
-      id <- sql"""insert into "ACTORS" ("NAME") values ($name)""".update.withUniqueGeneratedKeys[Int]("ID")
-      actor <- sql"""select * from "ACTORS" where "ID" = $id""".query[Actor].unique
+      id <- sql"insert into actors (name) values ($name)".update.withUniqueGeneratedKeys[Int]("id")
+      actor <- sql"select * from actors where id = $id".query[Actor].unique
     } yield actor
     retrievedActor.transact(xa)
   }
 
   def saveActors(actors: NonEmptyList[String]): IO[List[Int]] = {
     // This is a simple String, not a Fragment.
-    val insertStmt: String = """insert into "ACTORS" ("NAME") values (?) """
+    val insertStmt: String = "insert into actors (name) values (?)"
     val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Int]("ID")(actors.toList)
     actorsIds.compile.toList.transact(xa)
   }
@@ -142,7 +145,7 @@ object DoobieApp extends IOApp {
   //       sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[Director].stream
   def findAllDirectors(): IO[List[Director]] = {
     val findAllDirectors: fs2.Stream[doobie.ConnectionIO, Director] =
-      sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[Director].stream
+      sql"select name, last_name from directors".query[Director].stream
     findAllDirectors.compile.toList.transact(xa)
   }
 
@@ -153,11 +156,11 @@ object DoobieApp extends IOApp {
          |       m.year_of_production,
          |       array_agg(a.name) as actors,
          |       d.name
-         |       d.last_name
          |FROM movies m
          |JOIN movies_actors ma ON m.id = ma.movie_id
          |JOIN actors a ON ma.actor_id = a.id
          |JOIN directors d ON m.director_id = d.id
+         |WHERE m.title = $movieName
          |GROUP BY (m.id,
          |          m.title,
          |          m.year_of_production,
@@ -170,7 +173,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findActorByNameUsingLowLevelApi("Henry Cavill")
+    findMovieByName("Zack Snyder's Justice League")
       .map(println)
       .as(ExitCode.Success)
   }
