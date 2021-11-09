@@ -1,13 +1,23 @@
-import DoobieApp.Director
 import cats.effect.{MonadCancelThrow, Resource}
+import domain.Director
+import doobie.{Read, Write}
 import doobie.implicits._
 import doobie.util.transactor.Transactor
 
-// TODO Move the class Director to a better place
+object domain {
+  class Director(_name: String, _lastName: String) {
+    def name: String = _name
+
+    def lastName: String = _lastName
+
+    override def toString: String = s"$name $lastName"
+  }
+}
+
 trait Directors[F[_]] {
   def findById(id: Int): F[Option[Director]]
   def findAll: F[List[Director]]
-  def create(director: Director): F[Int]
+  def create(name: String, lastName: String): F[Int]
 }
 
 object Directors {
@@ -17,25 +27,26 @@ object Directors {
 
       def findById(id: Int): F[Option[Director]] =
         postgres.use { xa =>
-          selectById.option.transact(xa)
+          sql"SELECT name, last_name FROM directors WHERE id = $id".query[Director].option.transact(xa)
         }
 
       def findAll: F[List[Director]] =
         postgres.use { xa =>
-          selectAll.to[List].transact(xa)
+          sql"SELECT name, last_name FROM directors".query[Director].to[List].transact(xa)
         }
 
-      def create(director: Director): F[Int] =
+      def create(name: String, lastName: String): F[Int] =
         postgres.use { xa =>
-          insert.withUniqueGeneratedKeys[Int]("id").transact(xa)
+          sql"INSERT INTO directors (name, last_name) VALUES ($name, $lastName)".update.withUniqueGeneratedKeys[Int]("id").transact(xa)
         }
     }
   }
 }
 
-// TODO Resolve the problem with interpolation
 private object DirectorSQL {
-  val selectAll: doobie.Query0[Director] = sql"SELECT id, name FROM directors".query[Director]
-  val selectById: doobie.Query0[Director] = sql"SELECT id, name FROM directors WHERE id = $id".query[Director]
-  val insert: doobie.Update0 = sql"INSERT INTO directors (name, last_name) VALUES ($name, $lastName)".update
+  implicit val directorRead: Read[Director] =
+    Read[(String, String)].map { case (name, lastname) => new Director(name, lastname) }
+
+  implicit val directorWrite: Write[Director] =
+    Write[(String, String)].contramap(director => (director.name, director.lastName))
 }
