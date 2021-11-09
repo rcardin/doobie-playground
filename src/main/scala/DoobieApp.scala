@@ -95,7 +95,7 @@ object DoobieApp extends IOApp {
   def saveActors(actors: NonEmptyList[String]): IO[List[Int]] = {
     // This is a simple String, not a Fragment.
     val insertStmt: String = "insert into actors (name) values (?)"
-    val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Int]("ID")(actors.toList)
+    val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Int]("id")(actors.toList)
     actorsIds.compile.toList.transact(xa)
   }
 
