@@ -9,6 +9,5 @@ val DoobieVersion = "1.0.0-RC1"
 libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-core"     % DoobieVersion,
   "org.tpolecat" %% "doobie-postgres" % DoobieVersion,
-  "org.tpolecat" %% "doobie-hikari"   % DoobieVersion,
-  "org.tpolecat" %% "doobie-specs2"   % DoobieVersion % "test",
+  "org.tpolecat" %% "doobie-hikari"   % DoobieVersion
 )
