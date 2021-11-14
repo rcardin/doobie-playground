@@ -32,14 +32,12 @@ CREATE TABLE actors (
   PRIMARY KEY (id),
   name character varying NOT NULL
 );
-COMMENT ON TABLE actors IS 'List of available actors';
 
 -- Link between movies and actors
 CREATE TABLE movies_actors (
   movie_id uuid NOT NULL,
   actor_id integer NOT NULL
 );
-COMMENT ON TABLE movies_actors IS 'Connects movies to actors';
 
 ALTER TABLE movies_actors
 ADD CONSTRAINT movies_actors_id_movies_id_actors PRIMARY KEY (movie_id, actor_id);
