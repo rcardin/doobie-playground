@@ -6,7 +6,7 @@ import doobie.implicits._
 // Very important to deal with arrays
 import doobie.postgres._
 import doobie.postgres.implicits._
-import doobie.util.transactor.Transactor.Aux
+import doobie.util.transactor.Transactor._
 
 object DoobieApp extends IOApp {
 
@@ -15,7 +15,7 @@ object DoobieApp extends IOApp {
   case class Movie(id: String, title: String, year: Int, actors: List[String], director: String)
 
   // TODO What's Aux?
-  val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
+  val xa: Transactor[IO] = Transactor.fromDriverManager[IO](
     "org.postgresql.Driver",
     "jdbc:postgresql:myimdb",
     "postgres",
@@ -23,9 +23,9 @@ object DoobieApp extends IOApp {
   )
 
   def findAllActorsNamesProgram: IO[List[String]] = {
-    val findAllActors: fs2.Stream[doobie.ConnectionIO, String] =
-      sql"""select "NAME" from "ACTORS" """.query[String].stream
-    findAllActors.compile.toList.transact(xa)
+    val findAllActorsQuery: doobie.Query0[String] = sql"select name from actors".query[String]
+    val findAllActors: doobie.ConnectionIO[List[String]] = findAllActorsQuery.to[List]
+    findAllActors.transact(xa)
   }
 
   def findAllActorNamesUsingLowLevelApiProgram: IO[List[String]] = {
