@@ -28,6 +28,10 @@ object DoobieApp extends IOApp {
     findAllActors.transact(xa)
   }
 
+  def finaAllActorsNamesUsingStreams = {
+    val actorsNamesStream: fs2.Stream[doobie.ConnectionIO, String] = sql"select name from actors".query[String].stream
+  }
+
   def findAllActorNamesUsingLowLevelApiProgram: IO[List[String]] = {
     val query = "select name from actors"
     HC.stream[String](
@@ -173,7 +177,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findMovieByName("Zack Snyder's Justice League")
+    findAllActorsNamesProgram
       .map(println)
       .as(ExitCode.Success)
   }
