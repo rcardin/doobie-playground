@@ -28,8 +28,14 @@ object DoobieApp extends IOApp {
     findAllActors.transact(xa)
   }
 
-  def finaAllActorsNamesUsingStreams = {
+  def findAllActorsNamesUsingStreams(): Unit = {
     val actorsNamesStream: fs2.Stream[doobie.ConnectionIO, String] = sql"select name from actors".query[String].stream
+  }
+
+  def findAllActorsIdsAndNames: IO[List[(Int, String)]] = {
+    val query: doobie.Query0[(Int, String)] = sql"select id, name from actors".query[(Int, String)]
+    val findAllActors: doobie.ConnectionIO[List[(Int, String)]] = query.to[List]
+    findAllActors.transact(xa)
   }
 
   def findAllActorNamesUsingLowLevelApiProgram: IO[List[String]] = {
@@ -57,6 +63,12 @@ object DoobieApp extends IOApp {
     val findActor: doobie.ConnectionIO[Option[Actor]] =
       sql"select id, name from actors where name = $actorName".query[Actor].option
     findActor.transact(xa)
+  }
+
+  def findActorsByNameInitialLetterProgram(initialLetter: String): IO[List[Actor]] = {
+    val findActors: fs2.Stream[doobie.ConnectionIO, Actor] =
+      sql"select id, name from actors where LEFT(name, 1) = $initialLetter".query[Actor].stream
+    findActors.compile.toList.transact(xa)
   }
 
   def findActorByNameUsingLowLevelApi(actorName: String): IO[Option[Actor]] = {
@@ -177,7 +189,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findAllActorsNamesProgram
+    findActorsByNameInitialLetterProgram("H")
       .map(println)
       .as(ExitCode.Success)
   }
