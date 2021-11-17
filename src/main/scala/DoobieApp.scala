@@ -83,10 +83,32 @@ object DoobieApp extends IOApp {
       .transact(xa)
   }
 
+  def findActorsByInitialLetterUsingFragments(initialLetter: String): IO[List[Actor]] = {
+    val select: Fragment = fr"select id, name"
+    val from: Fragment = fr"from actors"
+    val where: Fragment = fr"where LEFT(name, 1) = $initialLetter"
+
+    val statement = select ++ from ++ where
+
+    statement.query[Actor].stream.compile.toList.transact(xa)
+  }
+
+  def findActorsByInitialLetterUsingFragmentsAndMonoids(initialLetter: String): IO[List[Actor]] = {
+    import cats.syntax.monoid._
+
+    val select: Fragment = fr"select id, name"
+    val from: Fragment = fr"from actors"
+    val where: Fragment = fr"where LEFT(name, 1) = $initialLetter"
+
+    val statement = select |+| from |+| where
+
+    statement.query[Actor].stream.compile.toList.transact(xa)
+  }
+
   def findActorsByNames(actorNames: NonEmptyList[String]): IO[List[Actor]] = {
-    val findActors: fs2.Stream[doobie.ConnectionIO, Actor] =
-      (fr"select id, name from actors where " ++ Fragments.in(fr"name", actorNames)).query[Actor].stream
-    findActors.compile.toList.transact(xa)
+    val sqlStatement: Fragment =
+      fr"select id, name from actors where " ++ Fragments.in(fr"name", actorNames)
+    sqlStatement.query[Actor].stream.compile.toList.transact(xa)
   }
 
   def saveActor(name: String): IO[Int] = {
@@ -189,7 +211,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findActorsByNameInitialLetterProgram("H")
+    findActorsByInitialLetterUsingFragmentsAndMonoids("H")
       .map(println)
       .as(ExitCode.Success)
   }
