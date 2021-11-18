@@ -71,8 +71,9 @@ object DoobieApp extends IOApp {
     findActors.compile.toList.transact(xa)
   }
 
-  def findActorByNameUsingLowLevelApi(actorName: String): IO[Option[Actor]] = {
+  def findActorByNameUsingHCApi(actorName: String): IO[Option[Actor]] = {
     val query = "select id, name from actors where name = ?"
+    val ps: _root_.doobie.hi.PreparedStatementIO[Unit] = HPS.set(actorName)
     HC.stream[Actor](
       query,
       HPS.set(actorName),   // Parameters start from index 1 by default
