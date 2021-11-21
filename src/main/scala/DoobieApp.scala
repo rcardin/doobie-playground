@@ -210,6 +210,12 @@ object DoobieApp extends IOApp {
     findAllDirectors.compile.toList.transact(xa)
   }
 
+  def updateJLYearOfProduction(): IO[Int] = {
+    val year = 2021
+    val id = "5e5a39bb-a497-4432-93e8-7322f16ac0b2"
+    sql"update movies set year_of_production = $year where id = $id".update.run.transact(xa)
+  }
+
   def findMovieByName(movieName: String): IO[Option[Movie]] = {
     val query = sql"""
          |SELECT m.id,
