@@ -113,6 +113,18 @@ object DoobieApp extends IOApp {
   }
 
   def saveActor(name: String): IO[Int] = {
+    val saveActor: doobie.ConnectionIO[Int] =
+    sql"insert into actors (name) values ($name)".update.run
+    saveActor.transact(xa)
+  }
+
+  def saveActorWithoutSugar(name: String): IO[Int] = {
+    val stmt = "insert into actors (name) values (?)"
+    val saveActor: doobie.ConnectionIO[Int] = Update[String](stmt).run(name)
+    saveActor.transact(xa)
+  }
+
+  def saveActorAndGetId(name: String): IO[Int] = {
     // The withUniqueGeneratedKeys says that we expected only one row back, and
     // allows us to get a set of columns from the modified row.
     val saveActor: doobie.ConnectionIO[Int] =
@@ -122,8 +134,6 @@ object DoobieApp extends IOApp {
   }
 
   def saveAndGetActor(name: String): IO[Actor] = {
-    // There is also a variant of the withUniqueGeneratedKeys that
-    // allows us to retrieve more than a row. It's called withGeneratedKeys.
     val retrievedActor = for {
       id <- sql"insert into actors (name) values ($name)".update.withUniqueGeneratedKeys[Int]("id")
       actor <- sql"select * from actors where id = $id".query[Actor].unique
@@ -212,7 +222,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findActorsByInitialLetterUsingFragmentsAndMonoids("H")
+    saveActorWithoutSugar("John Travolta")
       .map(println)
       .as(ExitCode.Success)
   }
