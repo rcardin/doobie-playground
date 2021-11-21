@@ -28,6 +28,12 @@ object DoobieApp extends IOApp {
     findAllActors.transact(xa)
   }
 
+  def findActorById(id: Int): IO[Actor] = {
+    val findActorById: doobie.ConnectionIO[Actor] =
+      sql"select id, name from actors where id = $id".query[Actor].unique
+    findActorById.transact(xa)
+  }
+
   def findAllActorsNamesUsingStreams(): Unit = {
     val actorsNamesStream: fs2.Stream[doobie.ConnectionIO, String] = sql"select name from actors".query[String].stream
   }
@@ -141,10 +147,16 @@ object DoobieApp extends IOApp {
     retrievedActor.transact(xa)
   }
 
-  def saveActors(actors: NonEmptyList[String]): IO[List[Int]] = {
+  def saveActors(actors: NonEmptyList[String]): IO[Int] = {
     // This is a simple String, not a Fragment.
     val insertStmt: String = "insert into actors (name) values (?)"
-    val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Int]("id")(actors.toList)
+    val numberOfRows: doobie.ConnectionIO[Int] = Update[String](insertStmt).updateMany(actors.toList)
+    numberOfRows.transact(xa)
+  }
+
+  def saveActorsAndReturnThem(actors: NonEmptyList[String]): IO[List[Actor]] = {
+    val insertStmt: String = "insert into actors (name) values (?)"
+    val actorsIds = Update[String](insertStmt).updateManyWithGeneratedKeys[Actor]("id", "name")(actors.toList)
     actorsIds.compile.toList.transact(xa)
   }
 
@@ -222,7 +234,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    saveActorWithoutSugar("John Travolta")
+    saveActorsAndReturnThem(NonEmptyList.of("Keanu Reeves", "Tom Holland"))
       .map(println)
       .as(ExitCode.Success)
   }
