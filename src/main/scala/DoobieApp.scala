@@ -239,8 +239,24 @@ object DoobieApp extends IOApp {
     query.transact(xa)
   }
 
+  class ActorName(fullName: String) {
+    val name: String = fullName.split(" ").head
+    val lastName: String = fullName.split(" ").last
+    override def toString: String = s"\nFirst name: $name\nLast name: $lastName\n"
+  }
+
+  object ActorName {
+    implicit val actorNameGet: Get[ActorName] = Get[String].map(new ActorName(_))
+    implicit val actorNamePut: Put[ActorName] =
+      Put[String].contramap(actorName => s"${actorName.name} ${actorName.lastName}")
+  }
+
+  def findAllActorNames(): IO[List[ActorName]] = {
+    sql"select name from actors".query[ActorName].to[List].transact(xa)
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    saveActorsAndReturnThem(NonEmptyList.of("Keanu Reeves", "Tom Holland"))
+    findAllActorNames()
       .map(println)
       .as(ExitCode.Success)
   }
