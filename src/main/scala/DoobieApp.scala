@@ -3,6 +3,7 @@ import cats.effect._
 import cats.implicits.catsSyntaxApplicativeId
 import doobie._
 import doobie.implicits._
+import io.estatico.newtype.macros.newtype
 // Very important to deal with arrays
 import doobie.postgres._
 import doobie.postgres.implicits._
@@ -239,16 +240,10 @@ object DoobieApp extends IOApp {
     query.transact(xa)
   }
 
-  class ActorName(fullName: String) {
-    val name: String = fullName.split(" ").head
-    val lastName: String = fullName.split(" ").last
-    override def toString: String = s"\nFirst name: $name\nLast name: $lastName\n"
-  }
-
+  @newtype case class ActorName(value: String)
   object ActorName {
-    implicit val actorNameGet: Get[ActorName] = Get[String].map(new ActorName(_))
-    implicit val actorNamePut: Put[ActorName] =
-      Put[String].contramap(actorName => s"${actorName.name} ${actorName.lastName}")
+    implicit val actorNameGet: Get[ActorName] = Get[String].map(ActorName(_))
+    implicit val actorNamePut: Put[ActorName] = Put[String].contramap(actorName => actorName.value)
   }
 
   def findAllActorNames(): IO[List[ActorName]] = {
