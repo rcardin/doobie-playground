@@ -161,20 +161,21 @@ object DoobieApp extends IOApp {
     actorsIds.compile.toList.transact(xa)
   }
 
-  class Director(_name: String, _lastName: String) {
-    def name: String = _name
-
-    def lastName: String = _lastName
-
-    override def toString: String = s"$name $lastName"
-  }
+  @newtype case class DirectorId(id: Int)
+  @newtype case class DirectorName(name: String)
+  @newtype case class DirectorLastName(lastName: String)
+  case class Director(id: DirectorId, name: DirectorName, lastName: DirectorLastName)
 
   object Director {
     implicit val directorRead: Read[Director] =
-      Read[(String, String)].map { case (name, lastname) => new Director(name, lastname) }
+      Read[(Int, String, String)].map { case (id, name, lastname) =>
+        new Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
+      }
 
     implicit val directorWrite: Write[Director] =
-      Write[(String, String)].contramap(director => (director.name, director.lastName))
+      Write[(Int, String, String)].contramap { director =>
+        (director.id.id, director.name.name, director.lastName.lastName)
+      }
   }
 
   // Cannot find or construct a Read instance for type:
@@ -207,7 +208,7 @@ object DoobieApp extends IOApp {
   //       sql"""select "NAME", "LAST_NAME" from "DIRECTORS" """.query[Director].stream
   def findAllDirectors(): IO[List[Director]] = {
     val findAllDirectors: fs2.Stream[doobie.ConnectionIO, Director] =
-      sql"select name, last_name from directors".query[Director].stream
+      sql"select id, name, last_name from directors".query[Director].stream
     findAllDirectors.compile.toList.transact(xa)
   }
 
@@ -242,8 +243,8 @@ object DoobieApp extends IOApp {
 
   @newtype case class ActorName(value: String)
   object ActorName {
-    implicit val actorNameGet: Get[ActorName] = Get[String].map(ActorName(_))
-    implicit val actorNamePut: Put[ActorName] = Put[String].contramap(actorName => actorName.value)
+    implicit val actorNameGet: Get[ActorName] = deriving
+    implicit val actorNamePut: Put[ActorName] = deriving
   }
 
   def findAllActorNames(): IO[List[ActorName]] = {
@@ -251,7 +252,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findAllActorNames()
+    findAllDirectors()
       .map(println)
       .as(ExitCode.Success)
   }
