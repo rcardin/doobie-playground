@@ -243,8 +243,9 @@ object DoobieApp extends IOApp {
 
   @newtype case class ActorName(value: String)
   object ActorName {
-    implicit val actorNameGet: Get[ActorName] = deriving
-    implicit val actorNamePut: Put[ActorName] = deriving
+//    implicit val actorNameGet: Get[ActorName] = deriving
+//    implicit val actorNamePut: Put[ActorName] = deriving
+    implicit val actorNameMeta: Meta[ActorName] = deriving
   }
 
   def findAllActorNames(): IO[List[ActorName]] = {
