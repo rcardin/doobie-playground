@@ -1,17 +1,15 @@
 import cats.effect.{MonadCancelThrow, Resource}
-import domain.Director
+import domain.{Director, DirectorId, DirectorLastName, DirectorName}
 import doobie.{Read, Write}
 import doobie.implicits._
 import doobie.util.transactor.Transactor
+import io.estatico.newtype.macros.newtype
 
 object domain {
-  class Director(_name: String, _lastName: String) {
-    def name: String = _name
-
-    def lastName: String = _lastName
-
-    override def toString: String = s"$name $lastName"
-  }
+  @newtype case class DirectorId(id: Int)
+  @newtype case class DirectorName(name: String)
+  @newtype case class DirectorLastName(lastName: String)
+  case class Director(id: DirectorId, name: DirectorName, lastName: DirectorLastName)
 }
 
 trait Directors[F[_]] {
@@ -45,8 +43,12 @@ object Directors {
 
 private object DirectorSQL {
   implicit val directorRead: Read[Director] =
-    Read[(String, String)].map { case (name, lastname) => new Director(name, lastname) }
+    Read[(Int, String, String)].map { case (id, name, lastname) =>
+      new Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
+    }
 
   implicit val directorWrite: Write[Director] =
-    Write[(String, String)].contramap(director => (director.name, director.lastName))
+    Write[(Int, String, String)].contramap { director =>
+      (director.id.id, director.name.name, director.lastName.lastName)
+    }
 }
