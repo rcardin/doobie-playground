@@ -44,7 +44,7 @@ object Directors {
 private object DirectorSQL {
   implicit val directorRead: Read[Director] =
     Read[(Int, String, String)].map { case (id, name, lastname) =>
-      new Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
+      Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
     }
 
   implicit val directorWrite: Write[Director] =

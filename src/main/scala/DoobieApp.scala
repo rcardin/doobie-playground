@@ -169,7 +169,7 @@ object DoobieApp extends IOApp {
   object Director {
     implicit val directorRead: Read[Director] =
       Read[(Int, String, String)].map { case (id, name, lastname) =>
-        new Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
+        Director(DirectorId(id), DirectorName(name), DirectorLastName(lastname))
       }
 
     implicit val directorWrite: Write[Director] =
@@ -220,21 +220,21 @@ object DoobieApp extends IOApp {
 
   def findMovieByName(movieName: String): IO[Option[Movie]] = {
     val query = sql"""
-         |SELECT m.id,
-         |       m.title,
-         |       m.year_of_production,
-         |       array_agg(a.name) as actors,
-         |       d.name
-         |FROM movies m
-         |JOIN movies_actors ma ON m.id = ma.movie_id
-         |JOIN actors a ON ma.actor_id = a.id
-         |JOIN directors d ON m.director_id = d.id
-         |WHERE m.title = $movieName
-         |GROUP BY (m.id,
-         |          m.title,
-         |          m.year_of_production,
-         |          d.name,
-         |          d.last_name)
+         | SELECT m.id,
+         |        m.title,
+         |        m.year_of_production,
+         |        array_agg(a.name) as actors,
+         |        d.name
+         | FROM movies m
+         | JOIN movies_actors ma ON m.id = ma.movie_id
+         | JOIN actors a ON ma.actor_id = a.id
+         | JOIN directors d ON m.director_id = d.id
+         | WHERE m.title = $movieName
+         | GROUP BY (m.id,
+         |           m.title,
+         |           m.year_of_production,
+         |           d.name,
+         |           d.last_name)
          |""".stripMargin
       .query[Movie]
       .option
