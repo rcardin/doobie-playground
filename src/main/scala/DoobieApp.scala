@@ -4,6 +4,8 @@ import cats.implicits.catsSyntaxApplicativeId
 import doobie._
 import doobie.implicits._
 import io.estatico.newtype.macros.newtype
+
+import java.util.UUID
 // Very important to deal with arrays
 import doobie.postgres._
 import doobie.postgres.implicits._
@@ -83,7 +85,7 @@ object DoobieApp extends IOApp {
     val ps: _root_.doobie.hi.PreparedStatementIO[Unit] = HPS.set(actorName)
     HC.stream[Actor](
       query,
-      HPS.set(actorName),   // Parameters start from index 1 by default
+      HPS.set(actorName), // Parameters start from index 1 by default
       512
     ).compile
       .toList
@@ -121,7 +123,7 @@ object DoobieApp extends IOApp {
 
   def saveActor(name: String): IO[Int] = {
     val saveActor: doobie.ConnectionIO[Int] =
-    sql"insert into actors (name) values ($name)".update.run
+      sql"insert into actors (name) values ($name)".update.run
     saveActor.transact(xa)
   }
 
@@ -162,8 +164,11 @@ object DoobieApp extends IOApp {
   }
 
   @newtype case class DirectorId(id: Int)
+
   @newtype case class DirectorName(name: String)
+
   @newtype case class DirectorLastName(lastName: String)
+
   case class Director(id: DirectorId, name: DirectorName, lastName: DirectorLastName)
 
   object Director {
@@ -220,31 +225,68 @@ object DoobieApp extends IOApp {
 
   def findMovieByName(movieName: String): IO[Option[Movie]] = {
     val query = sql"""
-         | SELECT m.id,
-         |        m.title,
-         |        m.year_of_production,
-         |        array_agg(a.name) as actors,
-         |        d.name
-         | FROM movies m
-         | JOIN movies_actors ma ON m.id = ma.movie_id
-         | JOIN actors a ON ma.actor_id = a.id
-         | JOIN directors d ON m.director_id = d.id
-         | WHERE m.title = $movieName
-         | GROUP BY (m.id,
-         |           m.title,
-         |           m.year_of_production,
-         |           d.name,
-         |           d.last_name)
-         |""".stripMargin
+                     | SELECT m.id,
+                     |        m.title,
+                     |        m.year_of_production,
+                     |        array_agg(a.name) as actors,
+                     |        d.name
+                     | FROM movies m
+                     | JOIN movies_actors ma ON m.id = ma.movie_id
+                     | JOIN actors a ON ma.actor_id = a.id
+                     | JOIN directors d ON m.director_id = d.id
+                     | WHERE m.title = $movieName
+                     | GROUP BY (m.id,
+                     |           m.title,
+                     |           m.year_of_production,
+                     |           d.name,
+                     |           d.last_name)
+                     |""".stripMargin
       .query[Movie]
       .option
     query.transact(xa)
   }
 
+  def findMovieByNameWithoutSqlJoin(movieName: String): IO[Option[Movie]] = {
+    val query = for {
+      maybeMovie <-
+        sql"""
+             | select id, title, year_of_production, director_id
+             | from movies
+             | where title = $movieName"""
+          .query[(UUID, String, Int, Int)].option
+      directors <- maybeMovie match {
+        case Some((_, _, _, directorId)) =>
+          sql"select name, last_name from directors where id = $directorId"
+            .query[(String, String)].to[List]
+        case None => List.empty[(String, String)].pure[ConnectionIO]
+      }
+      actors <- maybeMovie match {
+        case Some((movieId, _, _, _)) =>
+          sql"""
+               | select a.name
+               | from actors a
+               | join movies_actors ma on a.id = ma.actor_id
+               | where ma.movie_id = $movieId
+               |""".stripMargin
+            .query[String]
+            .to[List]
+        case None => List.empty[String].pure[ConnectionIO]
+      }
+    } yield {
+      maybeMovie.map { case (id, title, year, _) =>
+        val directorName = directors.head._1
+        val directorLastName = directors.head._2
+        Movie(id.toString, title, year, actors, s"$directorName $directorLastName")
+      }
+    }
+    query.transact(xa)
+  }
+
   @newtype case class ActorName(value: String)
+
   object ActorName {
-//    implicit val actorNameGet: Get[ActorName] = deriving
-//    implicit val actorNamePut: Put[ActorName] = deriving
+    //    implicit val actorNameGet: Get[ActorName] = deriving
+    //    implicit val actorNamePut: Put[ActorName] = deriving
     implicit val actorNameMeta: Meta[ActorName] = deriving
   }
 
@@ -253,7 +295,7 @@ object DoobieApp extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    findAllDirectors()
+    findMovieByNameWithoutSqlJoin("Zack Snyder's Justice League")
       .map(println)
       .as(ExitCode.Success)
   }
