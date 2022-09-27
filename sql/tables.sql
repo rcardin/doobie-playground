@@ -5,6 +5,8 @@
 -- Database
 CREATE DATABASE myimdb;
 
+\c myimdb;
+
 -- Directors
 CREATE TABLE directors (
   id serial NOT NULL,
