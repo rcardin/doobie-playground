@@ -11,21 +11,21 @@ object TaglessApp extends IOApp {
         "org.postgresql.Driver",
         "jdbc:postgresql:myimdb",
         "postgres",
-        "example",                              // password
-        ce                                   // await connection here
+        "example", // password
+        ce // await connection here
       )
     } yield xa
 
-    val directors: Directors[IO] = Directors.make(postgres)
+    val directorsRes: Resource[IO, Directors[IO]] = postgres.map(xa => Directors.make(xa))
 
-    val program: IO[Unit] = for {
-      id <- directors.create("Steven", "Spielberg")
-      spielberg <- directors.findById(id)
-      _ <- IO.println(s"The director of Jurassic Park is: $spielberg")
-      directorsList <- directors.findAll
-      _ <- IO.println(s"All directors: $directorsList")
-    } yield ()
-
-    program.as(ExitCode.Success)
+    directorsRes.use { directors =>
+      for {
+        id <- directors.create("Steven", "Spielberg")
+        spielberg <- directors.findById(id)
+        _ <- IO.println(s"The director of Jurassic Park is: $spielberg")
+        directorsList <- directors.findAll
+        _ <- IO.println(s"All directors: $directorsList")
+      } yield ()
+    }.as(ExitCode.Success)
   }
 }
